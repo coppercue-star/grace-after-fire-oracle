@@ -211,7 +211,10 @@ export default function GraceAfterFireOracle() {
       if (supabase) {
         await supabase
           .from("oracle_users")
-          .upsert({ device_id: deviceIdRef.current, state: current, updated_at: new Date().toISOString() });
+          .upsert(
+     { device_id: deviceIdRef.current, state: current, updated_at: new Date().toISOString() },
+     { onConflict: "device_id" }
+   );
       }
     } catch (e) {
       console.error("Storage error:", e);
