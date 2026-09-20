@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, Lock, Sparkles, BookOpen, Flame, Bell, BellOff, X, ChevronRight } from "lucide-react";
+import { Heart, Lock, Sparkles, BookOpen, Sun, Bell, BellOff, X, ChevronRight, Mail, LogOut, ShieldCheck, Layers } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
+import jsPDF from "jspdf";
 
 /* =========================================================
    STEP 1 OF SETUP — paste your own Supabase details below.
@@ -365,7 +366,98 @@ const CARDS = [
   { theme: "Forgiveness of Self", title: "You Are Allowed to Simply Be Done Carrying It", message: "At some point, you get to set the self-blame down, not because it's fully resolved, but because you're allowed to be done.", affirmation: "I am allowed to put the self-blame down and be done." },
 ].map((c, i) => ({ ...c, id: i, isPremium: i >= 15 }));
 
+const TERMS_CONTENT = {
+  title: "Terms of Use — Grace After Fire: Daily Oracle",
+  updated: "Last updated: September 2026",
+  sections: [
+    { h: "1. Acceptance of These Terms", b: "By accessing or using the Grace After Fire: Daily Oracle application (\"the App\"), you agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use the App." },
+    { h: "2. Description of the Service", b: "The App provides daily affirmation and reflection cards, together with an optional personal journal feature, intended to offer general encouragement and support for personal reflection. The App is provided on a freemium basis: a limited selection of cards is available at no cost, with a broader card library available through a paid Premium subscription." },
+    { h: "3. Not Professional Advice or a Substitute for Care", b: "The App is not a medical, psychological, psychiatric, legal, or financial service, and nothing within it constitutes professional advice, diagnosis, or treatment of any kind. The content is intended for general wellbeing and reflection purposes only and should not be relied upon as a substitute for professional support. If you are experiencing a mental health crisis, please contact a qualified professional or, in Australia, Lifeline on 13 11 14, or your local emergency services. If you are outside Australia, please contact your local emergency or crisis service." },
+    { h: "4. Eligibility", b: "You must be at least 18 years of age to create an account or use the journal feature of the App. The App is not directed at, and should not be used by, children." },
+    { h: "5. Accounts and Login", b: "Certain features of the App, including saving private journal reflections, require you to log in using a one-time secure email link. You are responsible for maintaining the confidentiality of access to your registered email account. We are not liable for any loss arising from unauthorised access to your account resulting from your failure to secure your own email account or device." },
+    { h: "6. Your Content", b: "Any reflections, notes, or other content you submit through the journal feature (\"User Content\") remain your property. You grant us a limited licence to store and display this content back to you within the App for the purpose of providing the service. We do not access, read, or use your User Content for any purpose other than operating the App, except where required by law." },
+    { h: "7. Subscriptions and Payment", b: "Certain features of the App are offered under a paid Premium subscription. Pricing, billing frequency, and payment terms will be clearly presented before you subscribe. Subscriptions may be cancelled at any time in accordance with the instructions provided within the App or the applicable payment provider. Except where required by law, subscription fees already paid are non-refundable." },
+    { h: "8. Intellectual Property", b: "All card content, text, branding, graphics, and the Grace After Fire name and associated marks are the intellectual property of Grace After Fire and may not be copied, reproduced, or distributed without prior written permission, except for your own personal, non-commercial use of the App." },
+    { h: "9. Acceptable Use", b: "You agree not to misuse the App, including but not limited to attempting to gain unauthorised access to other users' data, interfering with the operation of the App, or using the App for any unlawful purpose." },
+    { h: "10. Disclaimers and Limitation of Liability", b: "The App is provided \"as is\" and \"as available\" without warranties of any kind, whether express or implied. To the maximum extent permitted by law, Grace After Fire disclaims all warranties and shall not be liable for any indirect, incidental, or consequential damages arising from your use of, or inability to use, the App." },
+    { h: "11. Termination", b: "We reserve the right to suspend or terminate your access to the App at our discretion, including in cases of misuse or breach of these Terms." },
+    { h: "12. Changes to These Terms", b: "We may update these Terms from time to time. Continued use of the App following any changes constitutes your acceptance of the revised Terms." },
+    { h: "13. Governing Law", b: "These Terms are governed by the laws of Western Australia, Australia, and any disputes arising from these Terms shall be subject to the exclusive jurisdiction of the courts of Western Australia." },
+    { h: "14. Contact", b: "If you have any questions about these Terms, please contact us at: [insert contact email]" },
+  ],
+};
+
+const PRIVACY_CONTENT = {
+  title: "Privacy Policy — Grace After Fire: Daily Oracle",
+  updated: "Last updated: September 2026",
+  sections: [
+    { h: "1. Introduction", b: "This Privacy Policy explains how Grace After Fire: Daily Oracle (\"the App\", \"we\", \"us\") collects, uses, stores, and protects your personal information." },
+    { h: "2. Information We Collect", b: "We may collect: (a) your email address, when you choose to log in to protect your private journal entries; (b) the content of any journal reflections you choose to save; (c) usage information such as your streak count and reminder preferences; and (d) a randomly generated anonymous device identifier used to support the free, non-login experience of the App." },
+    { h: "3. How We Use Your Information", b: "We use this information solely to operate and improve the App, including saving your progress, protecting your private journal entries so that only you can access them, and enabling optional reminder features. We do not sell your personal information to third parties, and we do not use your journal content for advertising purposes." },
+    { h: "4. Third-Party Service Providers", b: "We use Supabase, a reputable third-party cloud database and authentication provider, to securely store your account information and journal entries, with industry-standard encryption. If you subscribe to a paid Premium plan, payment processing will be handled by a reputable third-party payment provider (such as Stripe), which processes your payment details directly; we do not store your full payment card details ourselves." },
+    { h: "5. Data Storage and Security", b: "Your information is stored securely using encryption and access controls designed to ensure that your private journal entries are visible only to you, once you are logged in. While we take reasonable steps to protect your data, no method of electronic storage or transmission is completely secure, and we cannot guarantee absolute security." },
+    { h: "6. Your Rights", b: "You may request access to, correction of, or deletion of your personal information at any time by contacting us at the email address below. You may also stop using the App and log out at any time, which will prevent further access to your saved journal entries from that device." },
+    { h: "7. Data Retention", b: "We retain your information for as long as your account remains active, or as needed to provide the service to you. You may request deletion of your account and associated data at any time." },
+    { h: "8. Children's Privacy", b: "The App is not intended for use by children under the age of 18, and we do not knowingly collect personal information from children." },
+    { h: "9. Cookies and Local Storage", b: "The App may use local device storage to remember your preferences (such as reminder settings) between sessions. This is used for functionality purposes only and not for third-party advertising or tracking." },
+    { h: "10. Changes to This Policy", b: "We may update this Privacy Policy from time to time. Any changes will be reflected with an updated \"last updated\" date at the top of this policy." },
+    { h: "11. Contact", b: "If you have any questions about this Privacy Policy or wish to exercise your rights regarding your personal information, please contact us at: [insert contact email]" },
+  ],
+};
+
+const THEME_SPOTLIGHT_INTROS = {
+  "Reclaiming Reality": "This week, we gently examine the fog of doubt — and put language to what you always knew.",
+  "Self-Worth": "This week is for remembering: your worth was never something you had to earn back.",
+  "Safety": "This week, we tend to the nervous system — letting safety become something felt, not just known.",
+  "Boundaries": "This week, we practice holding the line with kindness and without apology.",
+  "Grief for Lost Time": "This week, we make space to grieve what was taken — gently, without rushing past it.",
+  "Voice": "This week, we practice trusting the sound of our own voice again.",
+  "Trust in Self": "This week, we rebuild the quiet, steady trust in your own judgment.",
+  "Joy": "This week, we let joy back in — small, ordinary, and entirely deserved.",
+  "Identity": "This week, we get curious about who you are beneath every role you've played.",
+  "Future Self": "This week, we turn gently toward the woman you're becoming.",
+  "Money & Independence": "This week, we look financial fear in the eye and take one small step toward independence.",
+  "Parenting Through It": "This week is for the parent doing her best, one steady day at a time.",
+  "Anger as Information": "This week, we let anger speak — not as danger, but as information.",
+  "Community & Connection": "This week, we practice letting the right people back in, slowly.",
+  "Forgiveness of Self": "This week, we set down the guilt that was never ours to carry.",
+};
+
+function getWeekTheme(themes) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const days = Math.floor((now - start) / 86400000);
+  const week = Math.floor(days / 7);
+  return themes[week % themes.length];
+}
+
 const FREE_LIMIT = 15;
+const ALL_THEMES = [...new Set(CARDS.map((c) => c.theme))];
+const WEEK_THEME = getWeekTheme(ALL_THEMES);
+
+const CRISIS_CONTENT = {
+  title: "Support, Right Now",
+  updated: "You deserve real support, any time you need it — not just words on a card.",
+  sections: [
+    ["Australia", "Lifeline: 13 11 14 (24/7 crisis support)\n1800RESPECT: 1800 737 732 (24/7 domestic, family and sexual violence counselling)\nIn an emergency, call 000."],
+    ["Outside Australia", "Please contact your local emergency services, or search for a domestic violence or crisis helpline in your country. If you are unsure where to start, a doctor, local hospital, or trusted community organisation can help connect you to the right support."],
+    ["A gentle reminder", "This app offers encouragement and reflection, not professional care. Reaching out for real support alongside it is a sign of strength, not a step backward."],
+  ],
+};
+
+const MOODS = [
+  { key: "anxious", label: "Anxious", theme: "Safety" },
+  { key: "angry", label: "Angry", theme: "Anger as Information" },
+  { key: "lonely", label: "Lonely", theme: "Community & Connection" },
+  { key: "lost", label: "Lost", theme: "Identity" },
+  { key: "guilty", label: "Guilty", theme: "Forgiveness of Self" },
+  { key: "hopeful", label: "Hopeful", theme: "Future Self" },
+];
+
+// A card is locked only if it's premium AND not this week's free spotlight theme
+function isLocked(card) {
+  return card.isPremium && card.theme !== WEEK_THEME;
+}
 const STORAGE_KEY = "gaf-oracle-state";
 
 function todayStr() {
@@ -385,6 +477,27 @@ export default function GraceAfterFireOracle() {
   const [remindersOn, setRemindersOn] = useState(false);
   const [toast, setToast] = useState(null);
   const timerRef = useRef(null);
+
+  const [session, setSession] = useState(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(() => {
+    try { return localStorage.getItem("gaf-disclaimer-accepted") === "true"; }
+    catch (e) { return false; }
+  });
+
+  const acceptDisclaimer = () => {
+    try { localStorage.setItem("gaf-disclaimer-accepted", "true"); } catch (e) {}
+    setDisclaimerAccepted(true);
+  };
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginStatus, setLoginStatus] = useState(null); // null | "sending" | "sent" | "error"
+
+  // Set from real Stripe subscription status via refreshSubscriptionStatus()
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
+  const [stripeCustomerId, setStripeCustomerId] = useState(null);
+  const [checkoutStarting, setCheckoutStarting] = useState(false);
+  const [spreadCards, setSpreadCards] = useState(null);
 
   const deviceIdRef = useRef(null);
 
@@ -416,7 +529,7 @@ export default function GraceAfterFireOracle() {
   }, []);
 
   const persist = useCallback(async (partial) => {
-    const current = { journal, streak, lastDrawDate, remindersOn, ...partial };
+    const current = { streak, lastDrawDate, remindersOn, ...partial };
     try {
       if (supabase) {
         await supabase
@@ -429,13 +542,204 @@ export default function GraceAfterFireOracle() {
     } catch (e) {
       console.error("Storage error:", e);
     }
-  }, [journal, streak, lastDrawDate, remindersOn]);
+  }, [streak, lastDrawDate, remindersOn]);
+
+  // Track login session, and load that user's private journal once logged in
+  useEffect(() => {
+    if (!supabase) { setAuthLoaded(true); return; }
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session || null);
+      setAuthLoaded(true);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      if (newSession) {
+        setShowLogin(false);
+        setLoginStatus(null);
+      }
+    });
+    return () => listener?.subscription?.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (!supabase || !session?.user) return;
+      try {
+        const { data } = await supabase
+          .from("journal_entries")
+          .select("card_id, title, note, entry_date")
+          .eq("user_id", session.user.id)
+          .order("entry_date", { ascending: false });
+        if (data) {
+          const asMap = {};
+          data.forEach((row) => {
+            asMap[row.card_id] = { note: row.note, date: row.entry_date, title: row.title };
+          });
+          setJournal(asMap);
+        }
+      } catch (e) {
+        console.error("Journal load error:", e);
+      }
+    })();
+  }, [session]);
+
+  const refreshSubscriptionStatus = useCallback(async () => {
+    if (!supabase || !session?.user) return;
+    try {
+      const { data } = await supabase
+        .from("subscribers")
+        .select("status, stripe_customer_id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (data) {
+        setIsPremiumUser(data.status === "active" || data.status === "trialing");
+        setStripeCustomerId(data.stripe_customer_id || null);
+      } else {
+        setIsPremiumUser(false);
+        setStripeCustomerId(null);
+      }
+    } catch (e) {
+      console.error("Subscription status error:", e);
+    }
+  }, [session]);
+
+  useEffect(() => { refreshSubscriptionStatus(); }, [refreshSubscriptionStatus]);
+
+  // Handle returning from Stripe Checkout
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get("checkout");
+    if (checkout === "success") {
+      setToast({ title: "Welcome to Premium", message: "Your subscription is activating — this can take a few seconds.", affirmation: "", system: true });
+      setTimeout(() => setToast(null), 4000);
+      setTimeout(() => refreshSubscriptionStatus(), 3000);
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (checkout === "cancelled") {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  const startCheckout = async () => {
+    if (!session?.user) {
+      setShowUpsell(false);
+      setShowLogin(true);
+      return;
+    }
+    setCheckoutStarting(true);
+    try {
+      const res = await fetch("/.netlify/functions/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: session.user.email, userId: session.user.id }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Could not start checkout");
+      }
+    } catch (e) {
+      console.error("Checkout error:", e);
+      setToast({ title: "Something went wrong", message: "Couldn't start checkout — please try again.", affirmation: "", system: true });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setCheckoutStarting(false);
+    }
+  };
+
+  const openBillingPortal = async () => {
+    if (!stripeCustomerId) return;
+    try {
+      const res = await fetch("/.netlify/functions/create-portal-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: stripeCustomerId }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (e) {
+      console.error("Portal error:", e);
+    }
+  };
+
+  const sendMagicLink = async () => {
+    if (!loginEmail || !supabase) return;
+    setLoginStatus("sending");
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: loginEmail,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      setLoginStatus(error ? "error" : "sent");
+    } catch (e) {
+      setLoginStatus("error");
+    }
+  };
+
+  const logOut = async () => {
+    if (supabase) await supabase.auth.signOut();
+    setSession(null);
+    setJournal({});
+  };
+
+  const exportJournalPDF = () => {
+    const entries = Object.entries(journal).sort((a, b) => (a[1].date < b[1].date ? -1 : 1));
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 56;
+    const maxWidth = pageWidth - margin * 2;
+    let y = 70;
+
+    doc.setFont("times", "bold");
+    doc.setFontSize(22);
+    doc.text("Grace After Fire", margin, y);
+    y += 22;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(140, 98, 32);
+    doc.text("A KEEPSAKE OF YOUR HEALING JOURNAL", margin, y);
+    y += 40;
+
+    if (entries.length === 0) {
+      doc.setTextColor(60, 40, 40);
+      doc.setFontSize(12);
+      doc.text("No reflections saved yet.", margin, y);
+    }
+
+    entries.forEach(([id, entry]) => {
+      if (y > 740) { doc.addPage(); y = 70; }
+      doc.setFont("times", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(46, 27, 38);
+      doc.text(entry.title, margin, y);
+      y += 16;
+
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(9);
+      doc.setTextColor(168, 118, 58);
+      doc.text(entry.date, margin, y);
+      y += 18;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(60, 40, 40);
+      const lines = doc.splitTextToSize(entry.note || "", maxWidth);
+      lines.forEach((line) => {
+        if (y > 760) { doc.addPage(); y = 70; }
+        doc.text(line, margin, y);
+        y += 15;
+      });
+      y += 20;
+    });
+
+    doc.save("Grace-After-Fire-Journal.pdf");
+  };
 
   // In-app "reminder" simulation — stands in for real push notifications
   useEffect(() => {
     if (remindersOn) {
       const fire = () => {
-        const pool = CARDS.filter((c) => !c.isPremium);
+        const pool = CARDS.filter((c) => !isLocked(c));
         const card = pool[Math.floor(Math.random() * pool.length)];
         setToast(card);
         const delay = 4000;
@@ -462,10 +766,10 @@ export default function GraceAfterFireOracle() {
   const drawCard = (specific) => {
     let card = specific;
     if (!card) {
-      const pool = CARDS.filter((c) => !c.isPremium);
+      const pool = CARDS.filter((c) => !isLocked(c));
       card = pool[Math.floor(Math.random() * pool.length)];
     }
-    if (card.isPremium) {
+    if (isLocked(card)) {
       setShowUpsell(true);
       return;
     }
@@ -484,19 +788,140 @@ export default function GraceAfterFireOracle() {
     }
   };
 
+  const drawByMood = (theme) => {
+    const pool = CARDS.filter((c) => c.theme === theme && !isLocked(c));
+    if (pool.length === 0) {
+      setShowUpsell(true);
+      return;
+    }
+    drawCard(pool[Math.floor(Math.random() * pool.length)]);
+  };
+
+  const drawSpread = () => {
+    if (!isPremiumUser) {
+      setShowUpsell(true);
+      return;
+    }
+    const shuffled = [...CARDS].sort(() => Math.random() - 0.5);
+    setSpreadCards(shuffled.slice(0, 3));
+    setView("spread");
+  };
+
+  const shareCard = async (card) => {
+    const text = `"${card.message}" — "${card.affirmation}"\n\nGrace After Fire: Daily Oracle`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: card.title, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setToast({ title: "Copied", message: "Card text copied — paste it into your story.", affirmation: "", system: true });
+        setTimeout(() => setToast(null), 2500);
+      }
+    } catch (e) {
+      // user cancelled share sheet — no action needed
+    }
+  };
+
+  const downloadCardArt = (card) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const ctx = canvas.getContext("2d");
+
+    const grad = ctx.createLinearGradient(0, 0, 1080, 1350);
+    grad.addColorStop(0, "#7D2E45");
+    grad.addColorStop(0.55, "#5C2036");
+    grad.addColorStop(1, "#3D1526");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1080, 1350);
+
+    ctx.fillStyle = "#E3A94F";
+    ctx.font = "600 28px Georgia";
+    ctx.textAlign = "center";
+    ctx.fillText(card.theme.toUpperCase(), 540, 200);
+
+    ctx.fillStyle = "#FFFCF6";
+    ctx.font = "700 56px Georgia";
+    wrapText(ctx, card.title, 540, 300, 860, 66);
+
+    ctx.font = "400 34px Georgia";
+    ctx.fillStyle = "#F3E6D8";
+    wrapText(ctx, card.message, 540, 560, 820, 46);
+
+    ctx.font = "italic 400 32px Georgia";
+    ctx.fillStyle = "#E3A94F";
+    wrapText(ctx, `"${card.affirmation}"`, 540, 1050, 780, 44);
+
+    ctx.font = "600 26px Georgia";
+    ctx.fillStyle = "#C89550";
+    ctx.fillText("GRACE AFTER FIRE", 540, 1280);
+
+    const link = document.createElement("a");
+    link.download = `grace-after-fire-${card.id}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(" ");
+    let line = "";
+    let curY = y;
+    words.forEach((word) => {
+      const test = line + word + " ";
+      if (ctx.measureText(test).width > maxWidth && line !== "") {
+        ctx.fillText(line.trim(), x, curY);
+        line = word + " ";
+        curY += lineHeight;
+      } else {
+        line = test;
+      }
+    });
+    ctx.fillText(line.trim(), x, curY);
+  }
+
+
   const saveNote = async () => {
     if (!drawn) return;
-    const updated = { ...journal, [drawn.id]: { note: noteDraft, date: todayStr(), title: drawn.title } };
+    if (!session?.user) {
+      setShowLogin(true);
+      return;
+    }
+    const entry = { note: noteDraft, date: todayStr(), title: drawn.title };
+    const updated = { ...journal, [drawn.id]: entry };
     setJournal(updated);
-    await persist({ journal: updated });
-    setToast({ title: "Saved to your journal", message: "This reflection is kept for you.", affirmation: "", system: true });
+    try {
+      if (supabase) {
+        await supabase.from("journal_entries").upsert(
+          {
+            user_id: session.user.id,
+            card_id: drawn.id,
+            title: drawn.title,
+            note: noteDraft,
+            entry_date: entry.date,
+          },
+          { onConflict: "user_id,card_id" }
+        );
+      }
+    } catch (e) {
+      console.error("Journal save error:", e);
+    }
+    setToast({ title: "Saved to your journal", message: "This reflection is kept privately for you.", affirmation: "", system: true });
     setTimeout(() => setToast(null), 2500);
   };
 
   if (!loaded) {
     return (
       <div style={styles.loadingWrap}>
-        <Flame size={28} color="#A8425A" />
+        <Sun size={28} color="#A8425A" />
+      </div>
+    );
+  }
+
+  if (!disclaimerAccepted) {
+    return (
+      <div style={styles.app}>
+        <style>{fontImport}</style>
+        <DisclaimerModal onAccept={acceptDisclaimer} />
       </div>
     );
   }
@@ -505,89 +930,171 @@ export default function GraceAfterFireOracle() {
     <div style={styles.app}>
       <style>{fontImport}</style>
 
-      {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.brandRow}>
-          <Flame size={20} color="#7D2E45" strokeWidth={2} />
-          <span style={styles.brandName}>Grace After Fire</span>
-        </div>
-        <div style={styles.tagline}>Align. Release. Unfold.</div>
-        <div style={styles.streakPill}>
-          <Sparkles size={13} color="#B8895A" />
-          <span>{streak} day{streak === 1 ? "" : "s"} of showing up</span>
-        </div>
-      </header>
-
-      {/* Toast */}
-      {toast && (
-        <div style={styles.toast} onClick={() => setToast(null)}>
-          <div style={styles.toastInner}>
-            {!toast.system && <div style={styles.toastTitle}>{toast.title}</div>}
-            <div style={styles.toastMsg}>{toast.message}</div>
-            {toast.affirmation ? <div style={styles.toastAff}>"{toast.affirmation}"</div> : null}
-          </div>
-        </div>
-      )}
-
-      {/* Main view */}
-      <main style={styles.main}>
-        {view === "draw" && (
-          <DrawView
-            drawn={drawn}
-            flipped={flipped}
-            setFlipped={setFlipped}
-            onDraw={() => drawCard()}
-            noteDraft={noteDraft}
-            setNoteDraft={setNoteDraft}
-            onSaveNote={saveNote}
-            hasSavedNote={drawn && journal[drawn.id]}
-          />
-        )}
-        {view === "deck" && (
-          <DeckView cards={CARDS} onSelect={drawCard} onLocked={() => setShowUpsell(true)} />
-        )}
-        {view === "journal" && (
-          <JournalView journal={journal} cards={CARDS} />
-        )}
-      </main>
-
-      {/* Bottom nav */}
+      {/* Side nav */}
       <nav style={styles.nav}>
-        <NavButton icon={<Flame size={19} />} label="Today" active={view === "draw"} onClick={() => setView("draw")} />
-        <NavButton icon={<Sparkles size={19} />} label="Full Deck" active={view === "deck"} onClick={() => setView("deck")} />
-        <NavButton icon={<BookOpen size={19} />} label="Journal" active={view === "journal"} onClick={() => setView("journal")} />
-        <NavButton
-          icon={remindersOn ? <Bell size={19} /> : <BellOff size={19} />}
-          label="Reminders"
-          active={remindersOn}
-          onClick={toggleReminders}
-        />
+        <div style={styles.navIconGroup}>
+          <NavButton icon={<Sun size={19} />} label="Today" active={view === "draw"} onClick={() => setView("draw")} />
+          <NavButton icon={<Layers size={19} />} label="Spread" active={view === "spread"} onClick={drawSpread} />
+          <NavButton icon={<Sparkles size={19} />} label="Full Deck" active={view === "deck"} onClick={() => setView("deck")} />
+          <NavButton icon={<BookOpen size={19} />} label="Journal" active={view === "journal"} onClick={() => setView("journal")} />
+          <NavButton
+            icon={remindersOn ? <Bell size={19} /> : <BellOff size={19} />}
+            label="Reminders"
+            active={remindersOn}
+            onClick={toggleReminders}
+          />
+        </div>
+        <div style={styles.legalLinks}>
+          <button style={styles.legalLink} onClick={() => setView("support")}>Support</button>
+          <button style={styles.legalLink} onClick={() => setView("terms")}>Terms</button>
+          <button style={styles.legalLink} onClick={() => setView("privacy")}>Privacy</button>
+        </div>
       </nav>
 
-      {showUpsell && <UpsellModal onClose={() => setShowUpsell(false)} />}
+      <div style={styles.contentCol}>
+        {/* Header */}
+        <header style={styles.header}>
+          <div style={styles.brandRow}>
+            <Sun size={20} color="#7D2E45" strokeWidth={2} />
+            <span style={styles.brandName}>Grace After Fire</span>
+          </div>
+          <div style={styles.tagline}>Align. Release. Unfold.</div>
+          <div style={styles.streakPill}>
+            <Sparkles size={13} color="#B8895A" />
+            <span>{streak} day{streak === 1 ? "" : "s"} of showing up</span>
+          </div>
+          {authLoaded && (
+            session?.user ? (
+              <>
+                <button style={styles.accountLink} onClick={logOut}>
+                  <LogOut size={11} /> {session.user.email}
+                </button>
+                {isPremiumUser ? (
+                  <button style={styles.premiumBadge} onClick={openBillingPortal}>
+                    <Heart size={10} /> Premium — Manage Subscription
+                  </button>
+                ) : (
+                  <button style={styles.accountLink} onClick={() => setShowUpsell(true)}>
+                    <Heart size={11} /> Unlock Premium
+                  </button>
+                )}
+              </>
+            ) : (
+              <button style={styles.accountLink} onClick={() => setShowLogin(true)}>
+                <ShieldCheck size={11} /> Log in to protect your journal
+              </button>
+            )
+          )}
+        </header>
+
+        {/* Toast */}
+        {toast && (
+          <div style={styles.toast} onClick={() => setToast(null)}>
+            <div style={styles.toastInner}>
+              {!toast.system && <div style={styles.toastTitle}>{toast.title}</div>}
+              <div style={styles.toastMsg}>{toast.message}</div>
+              {toast.affirmation ? <div style={styles.toastAff}>"{toast.affirmation}"</div> : null}
+            </div>
+          </div>
+        )}
+
+        {/* Main view */}
+        <main style={styles.main}>
+          {view === "draw" && (
+            <DrawView
+              drawn={drawn}
+              flipped={flipped}
+              setFlipped={setFlipped}
+              onDraw={() => drawCard()}
+              onMoodDraw={drawByMood}
+              noteDraft={noteDraft}
+              setNoteDraft={setNoteDraft}
+              onSaveNote={saveNote}
+              hasSavedNote={drawn && journal[drawn.id]}
+              onSpotlightClick={() => setView("deck")}
+              onShare={shareCard}
+              onDownload={downloadCardArt}
+              isPremiumUser={isPremiumUser}
+              onSpread={drawSpread}
+            />
+          )}
+          {view === "deck" && (
+            <DeckView cards={CARDS} onSelect={drawCard} onLocked={() => setShowUpsell(true)} />
+          )}
+          {view === "journal" && (
+            <JournalView
+              journal={journal}
+              cards={CARDS}
+              session={session}
+              onLogin={() => setShowLogin(true)}
+              isPremiumUser={isPremiumUser}
+              onExport={exportJournalPDF}
+              onUpsell={() => setShowUpsell(true)}
+            />
+          )}
+          {view === "terms" && <LegalView content={TERMS_CONTENT} onBack={() => setView("draw")} />}
+          {view === "privacy" && <LegalView content={PRIVACY_CONTENT} onBack={() => setView("draw")} />}
+          {view === "support" && <LegalView content={CRISIS_CONTENT} onBack={() => setView("draw")} />}
+          {view === "spread" && spreadCards && (
+            <SpreadView cards={spreadCards} onNewSpread={drawSpread} onBack={() => setView("draw")} />
+          )}
+        </main>
+      </div>
+
+      {showUpsell && (
+        <UpsellModal
+          onClose={() => setShowUpsell(false)}
+          onCheckout={startCheckout}
+          checkoutStarting={checkoutStarting}
+        />
+      )}
+      {showLogin && (
+        <LoginModal
+          email={loginEmail}
+          setEmail={setLoginEmail}
+          status={loginStatus}
+          onSend={sendMagicLink}
+          onClose={() => { setShowLogin(false); setLoginStatus(null); }}
+        />
+      )}
     </div>
   );
 }
 
-function DrawView({ drawn, flipped, setFlipped, onDraw, noteDraft, setNoteDraft, onSaveNote, hasSavedNote }) {
+function DrawView({ drawn, flipped, setFlipped, onDraw, onMoodDraw, noteDraft, setNoteDraft, onSaveNote, hasSavedNote, onSpotlightClick, onShare, onDownload, isPremiumUser, onSpread }) {
   return (
     <div style={styles.drawWrap}>
+      <div style={styles.spotlightBanner} onClick={onSpotlightClick}>
+        <div style={styles.spotlightLabel}>This Week's Free Focus</div>
+        <div style={styles.spotlightTheme}>{WEEK_THEME}</div>
+        <div style={styles.spotlightIntro}>{THEME_SPOTLIGHT_INTROS[WEEK_THEME]}</div>
+        <div style={styles.spotlightUnlock}>Unlocked for everyone this week →</div>
+      </div>
       {!drawn ? (
         <div style={styles.emptyState}>
+          <div style={styles.moodPrompt}>How are you feeling right now?</div>
+          <div style={styles.moodRow}>
+            {MOODS.map((m) => (
+              <button key={m.key} style={styles.moodChip} onClick={() => onMoodDraw(m.theme)}>{m.label}</button>
+            ))}
+          </div>
           <div style={styles.cardBack} onClick={onDraw}>
             <div style={styles.cardBackInner}>
-              <Flame size={30} color="#F0D9A8" />
+              <Sun size={30} color="#F0D9A8" />
               <div style={styles.cardBackText}>Tap to draw<br />today's message</div>
             </div>
           </div>
           <p style={styles.emptyHint}>One card, chosen for exactly where you are today.</p>
+          <button style={styles.spreadLink} onClick={onSpread}>
+            {!isPremiumUser && <Lock size={11} />} Try a 3-Card Spread
+          </button>
         </div>
       ) : (
         <>
           <div style={styles.cardStage} onClick={() => setFlipped(true)}>
             <div style={{ ...styles.card, ...(flipped ? styles.cardFlipped : {}) }}>
               <div style={styles.cardFaceBack}>
-                <Flame size={26} color="#F9E8EA" />
+                <Sun size={26} color="#F9E8EA" />
                 <div style={styles.cardBackText}>Tap to reveal</div>
               </div>
               <div style={styles.cardFaceFront}>
@@ -601,6 +1108,10 @@ function DrawView({ drawn, flipped, setFlipped, onDraw, noteDraft, setNoteDraft,
 
           {flipped && (
             <>
+              <div style={styles.cardActionRow}>
+                <button style={styles.cardActionBtn} onClick={() => onShare(drawn)}>Share</button>
+                <button style={styles.cardActionBtn} onClick={() => onDownload(drawn)}>Download Art</button>
+              </div>
               <div style={styles.noteBox}>
                 <div style={styles.noteLabel}>What does this bring up for you?</div>
                 <textarea
@@ -623,6 +1134,28 @@ function DrawView({ drawn, flipped, setFlipped, onDraw, noteDraft, setNoteDraft,
   );
 }
 
+function SpreadView({ cards, onNewSpread, onBack }) {
+  const labels = ["Release", "Embrace", "What's Ahead"];
+  return (
+    <div style={styles.journalWrap}>
+      <button style={styles.drawAgainBtn} onClick={onBack}>← Back to Today</button>
+      <div style={{ ...styles.deckIntroTitle, marginTop: 14 }}>Your 3-Card Spread</div>
+      <div style={styles.deckIntroSub}>Release. Embrace. What's Ahead.</div>
+      <div style={{ marginTop: 18 }}>
+        {cards.map((c, i) => (
+          <div key={c.id} style={styles.spreadCard}>
+            <div style={styles.spreadCardLabel}>{labels[i]}</div>
+            <div style={styles.journalEntryTitle}>{c.title}</div>
+            <div style={styles.journalEntryNote}>{c.message}</div>
+            <div style={styles.cardAffirmation}>"{c.affirmation}"</div>
+          </div>
+        ))}
+      </div>
+      <button style={styles.saveBtn} onClick={onNewSpread}>Draw a New Spread</button>
+    </div>
+  );
+}
+
 function DeckView({ cards, onSelect, onLocked }) {
   const themes = [...new Set(cards.map((c) => c.theme))];
   return (
@@ -639,9 +1172,9 @@ function DeckView({ cards, onSelect, onLocked }) {
               <div
                 key={c.id}
                 style={styles.deckCard}
-                onClick={() => (c.isPremium ? onLocked() : onSelect(c))}
+                onClick={() => (isLocked(c) ? onLocked() : onSelect(c))}
               >
-                {c.isPremium && (
+                {isLocked(c) && (
                   <div style={styles.lockBadge}><Lock size={11} /></div>
                 )}
                 <div style={styles.deckCardTitle}>{c.title}</div>
@@ -654,11 +1187,46 @@ function DeckView({ cards, onSelect, onLocked }) {
   );
 }
 
-function JournalView({ journal, cards }) {
+function JournalView({ journal, cards, session, onLogin, isPremiumUser, onExport, onUpsell }) {
+  if (!session?.user) {
+    return (
+      <div style={styles.journalWrap}>
+        <div style={styles.deckIntroTitle}>Your Reflections</div>
+        <div style={styles.journalEmpty}>
+          <ShieldCheck size={26} color="#B08A5A" />
+          <p>Log in to protect and save your private reflections — only you will ever be able to see them.</p>
+          <button style={styles.loginCta} onClick={onLogin}>Log in with email</button>
+        </div>
+      </div>
+    );
+  }
   const entries = Object.entries(journal).sort((a, b) => (a[1].date < b[1].date ? 1 : -1));
+  const distinctThemes = new Set(Object.values(journal).map((e) => e.title)).size;
   return (
     <div style={styles.journalWrap}>
-      <div style={styles.deckIntroTitle}>Your Reflections</div>
+      <div style={styles.journalHeaderRow}>
+        <div style={styles.deckIntroTitle}>Your Reflections</div>
+        {entries.length > 0 && (
+          <button
+            style={styles.exportBtn}
+            onClick={() => (isPremiumUser ? onExport() : onUpsell())}
+          >
+            {!isPremiumUser && <Lock size={11} />} Download Keepsake PDF
+          </button>
+        )}
+      </div>
+      {entries.length > 0 && (
+        isPremiumUser ? (
+          <div style={styles.growthBox}>
+            <div style={styles.growthStat}><strong>{entries.length}</strong> reflections saved</div>
+            <div style={styles.growthStat}><strong>{distinctThemes}</strong> different moments explored</div>
+          </div>
+        ) : (
+          <button style={styles.growthTeaser} onClick={onUpsell}>
+            <Lock size={11} /> Unlock your Growth Timeline
+          </button>
+        )
+      )}
       {entries.length === 0 ? (
         <div style={styles.journalEmpty}>
           <BookOpen size={26} color="#D8AAB0" />
@@ -679,6 +1247,22 @@ function JournalView({ journal, cards }) {
   );
 }
 
+function LegalView({ content, onBack }) {
+  return (
+    <div style={styles.journalWrap}>
+      <button style={styles.drawAgainBtn} onClick={onBack}>← Back</button>
+      <div style={{ ...styles.deckIntroTitle, textAlign: "left", marginTop: 14 }}>{content.title}</div>
+      <div style={{ ...styles.deckIntroSub, textAlign: "left", marginBottom: 18 }}>{content.updated}</div>
+      {content.sections.map((s, i) => (
+        <div key={i} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#7D2E45", marginBottom: 5 }}>{s.h}</div>
+          <div style={styles.journalEntryNote}>{s.b}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function NavButton({ icon, label, active, onClick }) {
   return (
     <button style={{ ...styles.navBtn, ...(active ? styles.navBtnActive : {}) }} onClick={onClick}>
@@ -688,7 +1272,7 @@ function NavButton({ icon, label, active, onClick }) {
   );
 }
 
-function UpsellModal({ onClose }) {
+function UpsellModal({ onClose, onCheckout, checkoutStarting }) {
   return (
     <div style={styles.modalOverlay} onClick={onClose}>
       <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
@@ -697,13 +1281,88 @@ function UpsellModal({ onClose }) {
         <div style={styles.modalTitle}>Unlock the Full Oracle</div>
         <p style={styles.modalBody}>
           285 more cards across boundaries, grief, voice, joy, identity, money, parenting, anger, connection,
-          forgiveness and hope — plus unlimited draws and a private reflection journal that grows with you.
+          forgiveness and hope — plus unlimited draws and a downloadable PDF keepsake of your journal reflections.
         </p>
         <div style={styles.modalPriceRow}>
           <div style={styles.modalPrice}>$6.99<span style={styles.modalPriceSub}>/month</span></div>
         </div>
-        <button style={styles.modalCta}>Unlock Premium <ChevronRight size={16} /></button>
+        <button style={styles.modalCta} onClick={onCheckout} disabled={checkoutStarting}>
+          {checkoutStarting ? "Redirecting..." : "Unlock Premium"} <ChevronRight size={16} />
+        </button>
         <button style={styles.modalDismiss} onClick={onClose}>Not right now</button>
+      </div>
+    </div>
+  );
+}
+
+function DisclaimerModal({ onAccept }) {
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={styles.modalCard}>
+        <ShieldCheck size={26} color="#7D2E45" />
+        <div style={styles.modalTitle}>Before You Begin</div>
+        <p style={styles.modalBody}>
+          Grace After Fire offers general encouragement and reflection — it is not therapy, medical care, or
+          professional advice of any kind, and cannot replace support from a qualified professional.
+        </p>
+        <p style={{ ...styles.modalBody, marginTop: 10 }}>
+          If you are in crisis or need immediate support, please contact a licensed professional, or in Australia:
+          Lifeline on <strong>13 11 14</strong>, or 1800RESPECT on <strong>1800 737 732</strong>. If you are outside
+          Australia, please contact your local emergency or crisis service.
+        </p>
+        <p style={{ ...styles.modalBody, marginTop: 10, fontSize: 12.5 }}>
+          By continuing, you understand, acknowledge, and agree that this app is not professional advice, and that
+          you will seek support from a licensed professional if you need it. See our{" "}
+          <span style={{ textDecoration: "underline" }}>Terms</span> and{" "}
+          <span style={{ textDecoration: "underline" }}>Privacy Policy</span> for more.
+        </p>
+        <button style={styles.modalCta} onClick={onAccept}>
+          <ShieldCheck size={16} /> I Understand & Agree
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LoginModal({ email, setEmail, status, onSend, onClose }) {
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <button style={styles.modalClose} onClick={onClose}><X size={18} /></button>
+        <ShieldCheck size={26} color="#7D2E45" />
+        <div style={styles.modalTitle}>Protect Your Journal</div>
+        {status === "sent" ? (
+          <p style={styles.modalBody}>
+            Check your email — we've sent you a secure link. Tap it to log in, and your reflections will only ever be visible to you.
+          </p>
+        ) : (
+          <>
+            <p style={styles.modalBody}>
+              Your reflections are personal. Logging in with your email means only you can ever see them —
+              no password needed, just a secure one-time link.
+            </p>
+            <div style={styles.noteBox}>
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={styles.noteInput}
+              />
+            </div>
+            <button style={styles.modalCta} onClick={onSend} disabled={status === "sending"}>
+              <Mail size={16} /> {status === "sending" ? "Sending..." : "Send me a login link"}
+            </button>
+            {status === "error" && (
+              <p style={{ ...styles.modalBody, color: "#A8425A", marginTop: 8 }}>
+                Something went wrong sending that link — please try again.
+              </p>
+            )}
+          </>
+        )}
+        <button style={styles.modalDismiss} onClick={onClose}>
+          {status === "sent" ? "Close" : "Not right now"}
+        </button>
       </div>
     </div>
   );
@@ -723,11 +1382,13 @@ const styles = {
     fontFamily: "'Inter', sans-serif",
     color: "#2E1B26",
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
     position: "relative",
-    overflow: "hidden",
   },
-  header: { padding: "32px 24px 14px", textAlign: "center" },
+  contentCol: {
+    display: "flex", flexDirection: "column", flex: 1, minWidth: 0, position: "relative", marginLeft: 76,
+  },
+  header: { padding: "26px 20px 12px", textAlign: "center" },
   brandRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
   brandName: { fontFamily: "'Fraunces', serif", fontSize: 25, fontWeight: 600, letterSpacing: -0.3, color: "#2E1B26" },
   tagline: { fontSize: 10.5, letterSpacing: 2.5, textTransform: "uppercase", color: "#A8763A", marginTop: 5, fontWeight: 600 },
@@ -738,10 +1399,63 @@ const styles = {
     padding: "7px 16px", fontSize: 12, color: "#6E4A20", fontWeight: 600,
     boxShadow: "0 4px 14px -6px rgba(140,98,32,0.2)",
   },
-  main: { flex: 1, padding: "8px 20px 110px", overflowY: "auto" },
+  accountLink: {
+    display: "inline-flex", margin: "10px auto 0", background: "none", border: "none",
+    color: "#B08A5A", fontSize: 11, fontWeight: 600, cursor: "pointer",
+    fontFamily: "'Inter', sans-serif", alignItems: "center", gap: 5,
+  },
+  premiumBadge: {
+    display: "inline-flex", margin: "6px auto 0", background: "rgba(200,149,80,0.15)", border: "1px solid rgba(200,149,80,0.4)",
+    color: "#7D2E45", fontSize: 10.5, fontWeight: 700, cursor: "pointer", borderRadius: 999, padding: "4px 12px",
+    fontFamily: "'Inter', sans-serif", alignItems: "center", gap: 5,
+  },
+  loginCta: {
+    marginTop: 14, padding: "11px 22px", borderRadius: 999, border: "none",
+    background: "linear-gradient(135deg, #C89550, #A8763A)", color: "#2E1B26", fontWeight: 700, fontSize: 13,
+    cursor: "pointer", fontFamily: "'Inter', sans-serif",
+  },
+  main: { flex: 1, padding: "8px 18px 24px", overflowY: "auto" },
 
   drawWrap: { display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 24 },
-  emptyState: { display: "flex", flexDirection: "column", alignItems: "center", marginTop: 20 },
+  spotlightBanner: {
+    width: 264, marginBottom: 22, padding: "14px 18px", borderRadius: 18, cursor: "pointer",
+    background: "linear-gradient(120deg, rgba(200,149,80,0.18), rgba(125,46,69,0.1))",
+    border: "1px solid rgba(200,149,80,0.35)", textAlign: "center",
+  },
+  spotlightLabel: { fontSize: 9.5, letterSpacing: 1.4, textTransform: "uppercase", color: "#A8763A", fontWeight: 700, marginBottom: 4 },
+  spotlightTheme: { fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 600, color: "#2E1B26", marginBottom: 5 },
+  spotlightIntro: { fontSize: 11.5, color: "#7A5A3A", lineHeight: 1.45, fontStyle: "italic" },
+  spotlightUnlock: { fontSize: 10.5, color: "#A8763A", fontWeight: 700, marginTop: 8 },
+  emptyState: { display: "flex", flexDirection: "column", alignItems: "center", marginTop: 8 },
+  moodPrompt: { fontSize: 12.5, color: "#7A5A3A", fontWeight: 600, marginBottom: 10 },
+  moodRow: { display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginBottom: 22, maxWidth: 280 },
+  moodChip: {
+    padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(200,149,80,0.4)",
+    background: "rgba(255,255,255,0.5)", color: "#7D2E45", fontSize: 12, fontWeight: 600,
+    cursor: "pointer", fontFamily: "'Inter', sans-serif",
+  },
+  spreadLink: {
+    marginTop: 18, display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none",
+    color: "#A8763A", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif",
+  },
+  cardActionRow: { display: "flex", gap: 10, width: 264, marginTop: 18 },
+  cardActionBtn: {
+    flex: 1, padding: "9px 0", borderRadius: 999, border: "1px solid rgba(200,149,80,0.4)",
+    background: "rgba(255,255,255,0.5)", color: "#7D2E45", fontSize: 12, fontWeight: 600,
+    cursor: "pointer", fontFamily: "'Inter', sans-serif",
+  },
+  spreadCard: {
+    background: "rgba(255,255,255,0.65)", border: "1px solid rgba(200,149,80,0.25)", borderRadius: 16,
+    padding: 18, marginBottom: 14,
+  },
+  spreadCardLabel: { fontSize: 10.5, letterSpacing: 1.2, textTransform: "uppercase", color: "#A8763A", fontWeight: 700, marginBottom: 6 },
+  growthBox: { display: "flex", gap: 20, marginBottom: 18, padding: "12px 4px" },
+  growthStat: { fontSize: 12.5, color: "#5C3B47" },
+  growthTeaser: {
+    display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 16, padding: "8px 14px", borderRadius: 999,
+    border: "1px solid rgba(200,149,80,0.4)", background: "rgba(255,255,255,0.5)", color: "#A8763A",
+    fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif",
+  },
   cardBack: {
     width: 224, height: 324, borderRadius: 24, cursor: "pointer",
     background: "linear-gradient(150deg, #7D2E45 0%, #5C2036 55%, #3D1526 100%)",
@@ -817,6 +1531,12 @@ const styles = {
   },
 
   journalWrap: { paddingTop: 10 },
+  journalHeaderRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 },
+  exportBtn: {
+    display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 14px", borderRadius: 999, border: "none",
+    background: "linear-gradient(135deg, #C89550, #A8763A)", color: "#2E1B26", fontWeight: 700, fontSize: 11,
+    cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap",
+  },
   journalEmpty: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginTop: 50, color: "#8A6448", fontSize: 13.5, textAlign: "center" },
   journalEntry: { background: "rgba(255,255,255,0.65)", backdropFilter: "blur(6px)", border: "1px solid rgba(200,149,80,0.25)", borderRadius: 16, padding: 17, marginBottom: 12, boxShadow: "0 6px 16px -10px rgba(90,60,30,0.2)" },
   journalEntryHeader: { display: "flex", justifyContent: "space-between", marginBottom: 7 },
@@ -825,18 +1545,27 @@ const styles = {
   journalEntryNote: { fontSize: 13, color: "#4A3230", lineHeight: 1.5 },
 
   nav: {
-    position: "fixed", bottom: 18, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 32px)", maxWidth: 448,
-    display: "flex", justifyContent: "space-around", padding: "12px 8px",
-    background: "rgba(255,255,255,0.6)", backdropFilter: "blur(16px)",
-    borderRadius: 22, border: "1px solid rgba(200,149,80,0.3)",
-    boxShadow: "0 16px 40px -14px rgba(90,60,30,0.35)",
+    position: "fixed", top: 0, left: 0, width: 76, height: "100vh", zIndex: 30,
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 8,
+    padding: "24px 8px 16px",
+    background: "rgba(255,255,255,0.65)", backdropFilter: "blur(16px)",
+    borderRight: "1px solid rgba(200,149,80,0.3)",
+    boxShadow: "6px 0 24px -14px rgba(90,60,30,0.3)",
+  },
+  navIconGroup: {
+    flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 28,
   },
   navBtn: {
-    display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "none", border: "none",
-    color: "#B08A5A", cursor: "pointer", padding: "4px 10px", fontFamily: "'Inter', sans-serif",
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none",
+    color: "#B08A5A", cursor: "pointer", padding: "6px 4px", fontFamily: "'Inter', sans-serif", width: "100%",
   },
   navBtnActive: { color: "#7D2E45" },
-  navLabel: { fontSize: 10, fontWeight: 600 },
+  navLabel: { fontSize: 9.5, fontWeight: 600, textAlign: "center", lineHeight: 1.2 },
+  legalLinks: { display: "flex", flexDirection: "column", gap: 4, alignItems: "center" },
+  legalLink: {
+    background: "none", border: "none", color: "#C7A87D", fontSize: 9,
+    fontFamily: "'Inter', sans-serif", cursor: "pointer", padding: 2,
+  },
 
   toast: {
     position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", width: "88%", maxWidth: 420,
