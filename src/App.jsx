@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, Lock, Sparkles, BookOpen, Sun, Bell, BellOff, X, ChevronRight, Mail, LogOut, ShieldCheck } from "lucide-react";
+import { Heart, Lock, Sparkles, BookOpen, Sun, Bell, BellOff, X, ChevronRight, Mail, LogOut, ShieldCheck, Share2, Download } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import jsPDF from "jspdf";
 
@@ -943,31 +943,19 @@ export default function GraceAfterFireOracle() {
     <div style={styles.app}>
       <style>{fontImport}</style>
 
-      {/* Side nav */}
-      <nav style={styles.nav}>
-        <div style={styles.navIconGroup}>
-          <NavButton icon={<Sun size={19} />} label="Today" active={view === "draw"} onClick={() => setView("draw")} />
-          <NavButton icon={<Sparkles size={19} />} label="Full Deck" active={view === "deck"} onClick={() => setView("deck")} />
-          <NavButton icon={<BookOpen size={19} />} label="Journal" active={view === "journal"} onClick={() => setView("journal")} />
-          <NavButton
-            icon={remindersOn ? <Bell size={19} /> : <BellOff size={19} />}
-            label="Reminders"
-            active={remindersOn}
-            onClick={toggleReminders}
-          />
-        </div>
-        <div style={styles.legalLinks}>
-          <button style={styles.legalLink} onClick={() => setView("support")}>Support</button>
-          <button style={styles.legalLink} onClick={() => setView("terms")}>Terms</button>
-          <button style={styles.legalLink} onClick={() => setView("privacy")}>Privacy</button>
-        </div>
-      </nav>
-
       <div style={styles.contentCol}>
-        {/* Header */}
+        {/* Header with sunrise artwork */}
         <header style={styles.header}>
-          <div style={styles.brandRow}>
-            <svg width="40" height="40" viewBox="0 0 150 150" aria-hidden="true">
+          <svg viewBox="0 0 250 125" style={styles.sunrise} aria-hidden="true">
+            <defs>
+              <radialGradient id="gafGlow" cx="50%" cy="6%" r="60%">
+                <stop offset="0%" stopColor="#E3A94F" stopOpacity="0.55" />
+                <stop offset="45%" stopColor="#E3A94F" stopOpacity="0.14" />
+                <stop offset="100%" stopColor="#E3A94F" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <rect x="0" y="0" width="250" height="125" fill="url(#gafGlow)" />
+            <g transform="translate(125 8) scale(1.6667) translate(-75 -75)">
               <g fill="#E3A94F">
                 <polygon points="89.8,72.8 120.0,75.0 89.8,77.2" />
                 <polygon points="88.9,80.5 127.0,105.0 86.8,84.3" />
@@ -983,37 +971,58 @@ export default function GraceAfterFireOracle() {
                 <polygon points="86.8,65.7 127.0,45.0 88.9,69.5" />
               </g>
               <circle cx="75" cy="75" r="17.2" fill="#F7E4C4" />
-            </svg>
-            <span style={styles.brandName}>Grace After Fire</span>
-          </div>
-          <div style={styles.tagline}>Align · Release · Unfold</div>
-          <div style={styles.streakPill}>
-            <Sparkles size={13} color="#B8895A" />
-            <span>{streak} day{streak === 1 ? "" : "s"} of showing up</span>
-          </div>
-          {authLoaded && (
-            session?.user ? (
-              <>
-                <button style={styles.accountLink} onClick={logOut}>
-                  <LogOut size={11} /> {session.user.email}
-                </button>
-                {isPremiumUser ? (
-                  <button style={styles.premiumBadge} onClick={openBillingPortal}>
-                    <Heart size={10} /> Premium — Manage Subscription
-                  </button>
+            </g>
+          </svg>
+
+          <div style={styles.topRow}>
+            <div style={styles.streakMini}>
+              <Sparkles size={12} color="#E3A94F" />
+              <span>{streak} day{streak === 1 ? "" : "s"}</span>
+            </div>
+            {authLoaded && (
+              <div style={styles.accountMini}>
+                {session?.user ? (
+                  <>
+                    {isPremiumUser ? (
+                      <button style={styles.premiumBadge} onClick={openBillingPortal}>
+                        <Heart size={10} /> Premium
+                      </button>
+                    ) : (
+                      <button style={styles.premiumBadge} onClick={() => setShowUpsell(true)}>
+                        <Heart size={10} /> Unlock Premium
+                      </button>
+                    )}
+                    <button style={styles.accountLink} onClick={logOut} title={session.user.email} aria-label="Log out">
+                      <LogOut size={14} />
+                    </button>
+                  </>
                 ) : (
-                  <button style={styles.accountLink} onClick={() => setShowUpsell(true)}>
-                    <Heart size={11} /> Unlock Premium
+                  <button style={styles.accountLink} onClick={() => setShowLogin(true)}>
+                    <ShieldCheck size={12} /> Log in
                   </button>
                 )}
-              </>
-            ) : (
-              <button style={styles.accountLink} onClick={() => setShowLogin(true)}>
-                <ShieldCheck size={11} /> Log in to protect your journal
-              </button>
-            )
-          )}
+              </div>
+            )}
+          </div>
+
+          <div style={styles.brandName}>Grace After Fire</div>
+          <div style={styles.tagline}>Align · Release · Unfold</div>
         </header>
+
+        {/* Top tabs */}
+        <nav style={styles.tabBar}>
+          <NavButton label="Today" active={view === "draw"} onClick={() => setView("draw")} />
+          <NavButton label="Deck" active={view === "deck"} onClick={() => setView("deck")} />
+          <NavButton label="Journal" active={view === "journal"} onClick={() => setView("journal")} />
+          <button
+            style={{ ...styles.tabBell, ...(remindersOn ? styles.tabBellOn : {}) }}
+            onClick={toggleReminders}
+            aria-label={remindersOn ? "Turn reminders off" : "Turn reminders on"}
+            title="Daily reminder"
+          >
+            {remindersOn ? <Bell size={17} /> : <BellOff size={17} />}
+          </button>
+        </nav>
 
         {/* Toast */}
         {toast && (
@@ -1063,6 +1072,14 @@ export default function GraceAfterFireOracle() {
           {view === "privacy" && <LegalView content={PRIVACY_CONTENT} onBack={() => setView("draw")} />}
           {view === "support" && <LegalView content={CRISIS_CONTENT} onBack={() => setView("draw")} />}
         </main>
+
+        <footer style={styles.footer}>
+          <button style={styles.footerLink} onClick={() => setView("support")}>Support</button>
+          <span style={styles.footerDot}>·</span>
+          <button style={styles.footerLink} onClick={() => setView("terms")}>Terms</button>
+          <span style={styles.footerDot}>·</span>
+          <button style={styles.footerLink} onClick={() => setView("privacy")}>Privacy</button>
+        </footer>
       </div>
 
       {showUpsell && (
@@ -1085,41 +1102,75 @@ export default function GraceAfterFireOracle() {
   );
 }
 
+function SunMark({ size = 60 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 150 150" aria-hidden="true">
+      <g fill="#E3A94F">
+        <polygon points="89.8,72.8 120.0,75.0 89.8,77.2" />
+        <polygon points="88.9,80.5 127.0,105.0 86.8,84.3" />
+        <polygon points="84.3,86.8 97.5,114.0 80.5,88.9" />
+        <polygon points="77.2,89.8 75.0,135.0 72.8,89.8" />
+        <polygon points="69.5,88.9 52.5,114.0 65.7,86.8" />
+        <polygon points="63.2,84.3 23.0,105.0 61.1,80.5" />
+        <polygon points="60.2,77.2 30.0,75.0 60.2,72.8" />
+        <polygon points="61.1,69.5 23.0,45.0 63.2,65.7" />
+        <polygon points="65.7,63.2 52.5,36.0 69.5,61.1" />
+        <polygon points="72.8,60.2 75.0,15.0 77.2,60.2" />
+        <polygon points="80.5,61.1 97.5,36.0 84.3,63.2" />
+        <polygon points="86.8,65.7 127.0,45.0 88.9,69.5" />
+      </g>
+      <circle cx="75" cy="75" r="17.2" fill="#F7E4C4" />
+    </svg>
+  );
+}
+
 function DrawView({ drawn, flipped, setFlipped, onDraw, onMoodDraw, noteDraft, setNoteDraft, onSaveNote, hasSavedNote, onSpotlightClick, onShare, onDownload }) {
+  const [noteOpen, setNoteOpen] = useState(false);
+  useEffect(() => { setNoteOpen(false); }, [drawn && drawn.id]);
   return (
     <div style={styles.drawWrap}>
-      <div style={styles.spotlightBanner} onClick={onSpotlightClick}>
-        <div style={styles.spotlightLabel}>This Week's Free Focus</div>
-        <div style={styles.spotlightTheme}>{WEEK_THEME}</div>
-        <div style={styles.spotlightIntro}>{THEME_SPOTLIGHT_INTROS[WEEK_THEME]}</div>
-        <div style={styles.spotlightUnlock}>Unlocked for everyone this week →</div>
-      </div>
-      {!drawn ? (
-        <div style={styles.emptyState}>
-          <div style={styles.moodPrompt}>How are you feeling right now?</div>
-          <div style={styles.moodRow}>
+      <button style={styles.spotlightLine} onClick={onSpotlightClick}>
+        THEME THIS WEEK · <span style={styles.spotlightTheme}>{WEEK_THEME}</span> →
+      </button>
+
+      {!drawn && (
+        <>
+          <div style={styles.moodPrompt}>How are you feeling?</div>
+          <div className="gaf-scroll" style={styles.moodRow}>
             {MOODS.map((m) => (
               <button key={m.key} style={styles.moodChip} onClick={() => onMoodDraw(m.theme)}>{m.label}</button>
             ))}
           </div>
           <div style={styles.cardBack} onClick={onDraw}>
             <div style={styles.cardBackInner}>
-              <Sun size={30} color="#F0D9A8" />
-              <div style={styles.cardBackText}>Tap to draw<br />today's message</div>
+              <SunMark size={70} />
+              <div style={styles.cardBackText}>Tap to draw<br />today's card</div>
             </div>
           </div>
           <p style={styles.emptyHint}>One card, chosen for exactly where you are today.</p>
-        </div>
-      ) : (
+        </>
+      )}
+
+      {drawn && (
         <>
           <div style={styles.cardStage} onClick={() => setFlipped(true)}>
             <div style={{ ...styles.card, ...(flipped ? styles.cardFlipped : {}) }}>
               <div style={styles.cardFaceBack}>
-                <Sun size={26} color="#F9E8EA" />
+                <SunMark size={56} />
                 <div style={styles.cardBackText}>Tap to reveal</div>
               </div>
               <div style={styles.cardFaceFront}>
-                <div style={styles.cardTheme}>{drawn.theme}</div>
+                <div style={styles.cardTopRow}>
+                  <div style={styles.cardTheme}>{drawn.theme}</div>
+                  <div style={styles.cardIcons}>
+                    <button style={styles.iconBtn} aria-label="Share card" onClick={(e) => { e.stopPropagation(); onShare(drawn); }}>
+                      <Share2 size={14} />
+                    </button>
+                    <button style={styles.iconBtn} aria-label="Download card art" onClick={(e) => { e.stopPropagation(); onDownload(drawn); }}>
+                      <Download size={14} />
+                    </button>
+                  </div>
+                </div>
                 <div style={styles.cardTitle}>{drawn.title}</div>
                 <div style={styles.cardMessage}>{drawn.message}</div>
                 <div style={styles.cardAffirmation}>"{drawn.affirmation}"</div>
@@ -1129,24 +1180,26 @@ function DrawView({ drawn, flipped, setFlipped, onDraw, onMoodDraw, noteDraft, s
 
           {flipped && (
             <>
-              <div style={styles.cardActionRow}>
-                <button style={styles.cardActionBtn} onClick={() => onShare(drawn)}>Share</button>
-                <button style={styles.cardActionBtn} onClick={() => onDownload(drawn)}>Download Art</button>
-              </div>
-              <div style={styles.noteBox}>
-                <div style={styles.noteLabel}>What does this bring up for you?</div>
-                <textarea
-                  style={styles.noteInput}
-                  rows={3}
-                  placeholder="A private reflection, just for you..."
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                />
-                <button style={styles.saveBtn} onClick={onSaveNote}>
-                  {hasSavedNote ? "Update reflection" : "Save reflection"}
+              {!noteOpen ? (
+                <button style={styles.reflectBtn} onClick={() => setNoteOpen(true)}>
+                  {hasSavedNote ? "Edit your reflection" : "Write a reflection"}
                 </button>
-              </div>
-              <button style={styles.drawAgainBtn} onClick={onDraw}>Draw another free card</button>
+              ) : (
+                <div style={styles.noteBox}>
+                  <div style={styles.noteLabel}>What does this bring up for you?</div>
+                  <textarea
+                    style={styles.noteInput}
+                    rows={3}
+                    placeholder="A private reflection, just for you..."
+                    value={noteDraft}
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                  />
+                  <button style={styles.saveBtn} onClick={onSaveNote}>
+                    {hasSavedNote ? "Update reflection" : "Save reflection"}
+                  </button>
+                </div>
+              )}
+              <button style={styles.drawAgainBtn} onClick={onDraw}>Draw another card</button>
             </>
           )}
         </>
@@ -1262,11 +1315,10 @@ function LegalView({ content, onBack }) {
   );
 }
 
-function NavButton({ icon, label, active, onClick }) {
+function NavButton({ label, active, onClick }) {
   return (
-    <button style={{ ...styles.navBtn, ...(active ? styles.navBtnActive : {}) }} onClick={onClick}>
-      {icon}
-      <span style={styles.navLabel}>{label}</span>
+    <button style={{ ...styles.tabBtn, ...(active ? styles.tabBtnActive : {}) }} onClick={onClick}>
+      {label}
     </button>
   );
 }
@@ -1369,6 +1421,7 @@ function LoginModal({ email, setEmail, status, onSend, onClose }) {
 
 const fontImport = `
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap');
+.gaf-scroll::-webkit-scrollbar{display:none}
 `;
 
 const styles = {
@@ -1384,29 +1437,35 @@ const styles = {
     flexDirection: "row",
     position: "relative",
   },
-  contentCol: {
-    display: "flex", flexDirection: "column", flex: 1, minWidth: 0, position: "relative", marginLeft: 76,
-  },
-  header: { padding: "30px 20px 14px", textAlign: "center" },
-  brandRow: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0 },
-  brandName: { fontFamily: "'Fraunces', serif", fontSize: 21, fontWeight: 600, letterSpacing: -0.2, color: "#FFFFFF", marginTop: 8 },
-  tagline: { fontSize: 8.5, letterSpacing: 2, textTransform: "uppercase", color: "#E3A94F", marginTop: 5, fontWeight: 600 },
-  streakPill: {
-    display: "inline-flex", alignItems: "center", gap: 6, marginTop: 18,
-    background: "rgba(255,255,255,0.08)", backdropFilter: "blur(10px)",
-    border: "1px solid rgba(227,169,79,0.3)", borderRadius: 999,
-    padding: "7px 16px", fontSize: 12, color: "#F0D9A8", fontWeight: 600,
-  },
+  contentCol: { display: "flex", flexDirection: "column", flex: 1, minWidth: 0, position: "relative" },
+  header: { position: "relative", textAlign: "center", paddingBottom: 6 },
+  sunrise: { display: "block", width: "100%", height: "auto" },
+  topRow: { position: "absolute", top: 0, left: 0, right: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", zIndex: 2 },
+  streakMini: { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "#F0D9A8" },
+  accountMini: { display: "inline-flex", alignItems: "center", gap: 10 },
+  brandName: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, letterSpacing: -0.2, color: "#FFFFFF", marginTop: -16, position: "relative", textShadow: "0 2px 10px rgba(61,21,38,0.6)" },
+  tagline: { fontSize: 8.5, letterSpacing: 2.2, textTransform: "uppercase", color: "#E3A94F", marginTop: 5, fontWeight: 600 },
   accountLink: {
-    display: "inline-flex", margin: "10px auto 0", background: "none", border: "none",
-    color: "rgba(243,230,216,0.55)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-    fontFamily: "'Inter', sans-serif", alignItems: "center", gap: 5,
+    display: "inline-flex", background: "none", border: "none",
+    color: "rgba(243,230,216,0.85)", fontSize: 12, fontWeight: 600, cursor: "pointer",
+    fontFamily: "'Inter', sans-serif", alignItems: "center", gap: 5, padding: 0,
   },
   premiumBadge: {
-    display: "inline-flex", margin: "6px auto 0", background: "rgba(227,169,79,0.15)", border: "1px solid rgba(227,169,79,0.4)",
-    color: "#E3A94F", fontSize: 10.5, fontWeight: 700, cursor: "pointer", borderRadius: 999, padding: "4px 12px",
+    display: "inline-flex", background: "rgba(227,169,79,0.15)", border: "1px solid rgba(227,169,79,0.45)",
+    color: "#E3A94F", fontSize: 10.5, fontWeight: 700, cursor: "pointer", borderRadius: 999, padding: "4px 11px",
     fontFamily: "'Inter', sans-serif", alignItems: "center", gap: 5,
   },
+  tabBar: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "6px 14px 0", borderBottom: "1px solid rgba(227,169,79,0.18)" },
+  tabBtn: {
+    flex: 1, background: "none", border: "none", borderBottom: "2px solid transparent", padding: "11px 4px",
+    color: "rgba(243,230,216,0.9)", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif",
+  },
+  tabBtnActive: { color: "#E3A94F", borderBottom: "2px solid #E3A94F" },
+  tabBell: { background: "none", border: "none", padding: "10px 8px", color: "rgba(243,230,216,0.7)", cursor: "pointer", display: "flex" },
+  tabBellOn: { color: "#E3A94F" },
+  footer: { display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: "10px 0 22px" },
+  footerLink: { background: "none", border: "none", color: "rgba(243,230,216,0.55)", fontSize: 11, cursor: "pointer", fontFamily: "'Inter', sans-serif", padding: 2 },
+  footerDot: { color: "rgba(243,230,216,0.3)", fontSize: 11 },
   loginCta: {
     marginTop: 14, padding: "11px 22px", borderRadius: 999, border: "none",
     background: "linear-gradient(135deg, #E3A94F, #C89550)", color: "#3D1526", fontWeight: 700, fontSize: 13,
@@ -1414,29 +1473,33 @@ const styles = {
   },
   main: { flex: 1, padding: "8px 18px 24px", overflowY: "auto" },
 
-  drawWrap: { display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16 },
-  spotlightBanner: {
-    width: 264, marginBottom: 22, padding: "14px 18px", borderRadius: 18, cursor: "pointer",
-    background: "rgba(227,169,79,0.1)",
-    border: "1px solid rgba(227,169,79,0.3)", textAlign: "center",
+  drawWrap: { display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12 },
+  spotlightLine: {
+    background: "none", border: "none", cursor: "pointer", fontFamily: "'Inter', sans-serif",
+    fontSize: 10.5, letterSpacing: 1.3, fontWeight: 700, color: "#E3A94F", marginBottom: 20, padding: "4px 0",
   },
-  spotlightLabel: { fontSize: 9.5, letterSpacing: 1.4, textTransform: "uppercase", color: "#E3A94F", fontWeight: 700, marginBottom: 4 },
-  spotlightTheme: { fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 5 },
-  spotlightIntro: { fontSize: 11.5, color: "rgba(243,230,216,0.75)", lineHeight: 1.45, fontStyle: "italic" },
-  spotlightUnlock: { fontSize: 10.5, color: "#E3A94F", fontWeight: 700, marginTop: 8 },
+  spotlightTheme: { fontFamily: "'Fraunces', serif", fontSize: 13, letterSpacing: 0, fontWeight: 600, color: "#FFFFFF", textTransform: "none" },
   emptyState: { display: "flex", flexDirection: "column", alignItems: "center", marginTop: 8 },
-  moodPrompt: { fontSize: 12.5, color: "rgba(243,230,216,0.75)", fontWeight: 600, marginBottom: 10 },
-  moodRow: { display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginBottom: 22, maxWidth: 280 },
+  moodPrompt: { fontSize: 12.5, color: "rgba(243,230,216,0.8)", fontWeight: 600, marginBottom: 10, alignSelf: "flex-start" },
+  moodRow: {
+    display: "flex", gap: 8, overflowX: "auto", width: "100%", marginBottom: 24, paddingRight: 30,
+    scrollbarWidth: "none", WebkitMaskImage: "linear-gradient(to right, #000 85%, transparent)", maskImage: "linear-gradient(to right, #000 85%, transparent)",
+  },
   moodChip: {
-    padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(227,169,79,0.35)",
+    padding: "7px 15px", borderRadius: 999, border: "1px solid rgba(227,169,79,0.35)", flexShrink: 0, whiteSpace: "nowrap",
     background: "rgba(255,255,255,0.06)", color: "#F0D9A8", fontSize: 12, fontWeight: 600,
     cursor: "pointer", fontFamily: "'Inter', sans-serif",
   },
-  cardActionRow: { display: "flex", gap: 10, width: 264, marginTop: 18 },
-  cardActionBtn: {
-    flex: 1, padding: "9px 0", borderRadius: 999, border: "1px solid rgba(227,169,79,0.35)",
-    background: "rgba(255,255,255,0.06)", color: "#F0D9A8", fontSize: 12, fontWeight: 600,
-    cursor: "pointer", fontFamily: "'Inter', sans-serif",
+  cardIcons: { display: "flex", gap: 8 },
+  iconBtn: {
+    width: 30, height: 30, borderRadius: 999, border: "1px solid rgba(227,169,79,0.4)", background: "rgba(255,255,255,0.08)",
+    color: "#F0D9A8", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0,
+  },
+  cardTopRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  reflectBtn: {
+    marginTop: 20, padding: "12px 28px", borderRadius: 999, border: "none",
+    background: "linear-gradient(135deg, #E3A94F, #C89550)", color: "#3D1526", fontWeight: 700, fontSize: 13.5, cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
   },
   growthBox: { display: "flex", gap: 20, marginBottom: 18, padding: "12px 4px" },
   growthStat: { fontSize: 12.5, color: "rgba(243,230,216,0.85)" },
@@ -1446,7 +1509,7 @@ const styles = {
     fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif",
   },
   cardBack: {
-    width: 224, height: 324, borderRadius: 24, cursor: "pointer",
+    width: 170, height: 232, borderRadius: 22, cursor: "pointer",
     background: "linear-gradient(150deg, #96385A 0%, #6B2540 55%, #4A1A2E 100%)",
     boxShadow: "0 24px 48px -16px rgba(61,21,38,0.6), inset 0 1px 0 rgba(227,169,79,0.25)",
     display: "flex", alignItems: "center", justifyContent: "center",
@@ -1456,26 +1519,27 @@ const styles = {
   cardBackText: { color: "#F0D9A8", fontSize: 14, fontWeight: 500, lineHeight: 1.5, letterSpacing: 0.1 },
   emptyHint: { marginTop: 24, fontSize: 13.5, color: "rgba(243,230,216,0.6)", textAlign: "center", maxWidth: 250, lineHeight: 1.55 },
 
-  cardStage: { perspective: 1400, cursor: "pointer", width: 264, height: 344 },
+  cardStage: { perspective: 1400, cursor: "pointer", width: "100%", maxWidth: 300 },
   card: {
-    width: "100%", height: "100%", position: "relative",
+    display: "grid", position: "relative", minHeight: 340,
     transformStyle: "preserve-3d",
     transition: "transform 0.6s cubic-bezier(.2,.8,.2,1)",
   },
   cardFlipped: { transform: "rotateY(180deg)" },
   cardFaceBack: {
-    position: "absolute", inset: 0, borderRadius: 22, backfaceVisibility: "hidden",
+    gridArea: "1 / 1", borderRadius: 22, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden",
     background: "linear-gradient(150deg, #96385A 0%, #6B2540 55%, #4A1A2E 100%)",
     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14,
     boxShadow: "0 24px 48px -16px rgba(61,21,38,0.6)",
     border: "1px solid rgba(227,169,79,0.3)",
   },
   cardFaceFront: {
-    position: "absolute", inset: 0, borderRadius: 22, padding: "30px 26px",
-    background: "linear-gradient(150deg, #7D2E45 0%, #5C2036 100%)", transform: "rotateY(180deg)", backfaceVisibility: "hidden",
+    gridArea: "1 / 1", borderRadius: 22, padding: "20px 22px 24px",
+    background: "linear-gradient(150deg, #7D2E45 0%, #5C2036 100%)", transform: "rotateY(180deg)",
+    backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden",
     boxShadow: "0 24px 48px -16px rgba(61,21,38,0.5)",
     border: "1px solid rgba(227,169,79,0.3)",
-    display: "flex", flexDirection: "column", gap: 16, overflowY: "auto",
+    display: "flex", flexDirection: "column", gap: 14,
   },
   cardTheme: { fontSize: 10.5, letterSpacing: 1.6, textTransform: "uppercase", color: "rgba(243,230,216,0.6)", fontWeight: 700 },
   cardTitle: { fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 600, color: "#FFFFFF", lineHeight: 1.12, letterSpacing: -0.3 },
@@ -1485,7 +1549,7 @@ const styles = {
     background: "#F3E6D8", borderRadius: 12, padding: "14px 16px",
   },
 
-  noteBox: { width: 264, marginTop: 24 },
+  noteBox: { width: "100%", maxWidth: 300, marginTop: 20 },
   noteLabel: { fontSize: 12.5, color: "rgba(243,230,216,0.7)", marginBottom: 8, fontWeight: 600 },
   noteInput: {
     width: "100%", borderRadius: 16, border: "1px solid rgba(227,169,79,0.3)", padding: 13,
@@ -1498,7 +1562,7 @@ const styles = {
     fontFamily: "'Inter', sans-serif",
   },
   drawAgainBtn: {
-    marginTop: 16, background: "none", border: "none", color: "#E3A94F",
+    marginTop: 14, background: "none", border: "none", color: "#E3A94F",
     fontSize: 13, fontWeight: 600, cursor: "pointer",
     fontFamily: "'Inter', sans-serif",
   },
@@ -1535,28 +1599,6 @@ const styles = {
   journalEntryTitle: { fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 16, color: "#FFFFFF" },
   journalEntryDate: { fontSize: 11, color: "#E3A94F", fontWeight: 600 },
   journalEntryNote: { fontSize: 13, color: "rgba(243,230,216,0.85)", lineHeight: 1.5 },
-
-  nav: {
-    position: "fixed", top: 0, left: 0, width: 76, height: "100vh", zIndex: 30,
-    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 8,
-    padding: "20px 8px 12px", overflowY: "auto",
-    background: "rgba(0,0,0,0.2)", backdropFilter: "blur(16px)",
-    borderRight: "1px solid rgba(227,169,79,0.2)",
-  },
-  navIconGroup: {
-    flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 20,
-  },
-  navBtn: {
-    display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none",
-    color: "rgba(243,230,216,0.5)", cursor: "pointer", padding: "6px 4px", fontFamily: "'Inter', sans-serif", width: "100%",
-  },
-  navBtnActive: { color: "#E3A94F" },
-  navLabel: { fontSize: 9.5, fontWeight: 600, textAlign: "center", lineHeight: 1.2 },
-  legalLinks: { display: "flex", flexDirection: "column", gap: 4, alignItems: "center" },
-  legalLink: {
-    background: "none", border: "none", color: "rgba(243,230,216,0.35)", fontSize: 9,
-    fontFamily: "'Inter', sans-serif", cursor: "pointer", padding: 2,
-  },
 
   toast: {
     position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", width: "88%", maxWidth: 420,
