@@ -395,7 +395,7 @@ const TERMS_CONTENT = {
     { h: "11. Termination", b: "We reserve the right to suspend or terminate your access to the App at our discretion, including in cases of misuse or breach of these Terms." },
     { h: "12. Changes to These Terms", b: "We may update these Terms from time to time. Continued use of the App following any changes constitutes your acceptance of the revised Terms." },
     { h: "13. Governing Law", b: "These Terms are governed by the laws of Western Australia, Australia, and any disputes arising from these Terms shall be subject to the exclusive jurisdiction of the courts of Western Australia." },
-    { h: "14. Contact", b: "If you have any questions about these Terms, please contact us at: [insert contact email]" },
+    { h: "14. Contact", b: "If you have any questions about these Terms, please contact us at: graceafterfire.app@gmail.com" },
   ],
 };
 
@@ -413,7 +413,7 @@ const PRIVACY_CONTENT = {
     { h: "8. Children's Privacy", b: "The App is not intended for use by children under the age of 18, and we do not knowingly collect personal information from children." },
     { h: "9. Cookies and Local Storage", b: "The App may use local device storage to remember your preferences (such as reminder settings) between sessions. This is used for functionality purposes only and not for third-party advertising or tracking." },
     { h: "10. Changes to This Policy", b: "We may update this Privacy Policy from time to time. Any changes will be reflected with an updated \"last updated\" date at the top of this policy." },
-    { h: "11. Contact", b: "If you have any questions about this Privacy Policy or wish to exercise your rights regarding your personal information, please contact us at: [insert contact email]" },
+    { h: "11. Contact", b: "If you have any questions about this Privacy Policy or wish to exercise your rights regarding your personal information, please contact us at: graceafterfire.app@gmail.com" },
   ],
 };
 
@@ -451,12 +451,11 @@ const CRISIS_CONTENT = {
   title: "Support, Right Now",
   updated: "You deserve real support, any time you need it — not just words on a card.",
   sections: [
-    ["Australia", "Lifeline: 13 11 14 (24/7 crisis support)\n1800RESPECT: 1800 737 732 (24/7 domestic, family and sexual violence counselling)\nIn an emergency, call 000."],
-    ["Outside Australia", "Please contact your local emergency services, or search for a domestic violence or crisis helpline in your country. If you are unsure where to start, a doctor, local hospital, or trusted community organisation can help connect you to the right support."],
-    ["A gentle reminder", "This app offers encouragement and reflection, not professional care. Reaching out for real support alongside it is a sign of strength, not a step backward."],
+    { h: "If you are in danger right now", b: "Please call your local emergency number straight away. If it is not safe to talk, stay on the line quietly. In many places the operator will still send help." },
+    { h: "Getting support", b: "Please check your country's local services for available support. Domestic violence helplines, shelters, counsellors, doctors and community organisations can all help, and most are free and confidential." },
+    { h: "A gentle reminder", b: "This app offers encouragement and reflection, not professional care. Reaching out for real support alongside it is a sign of strength, not a step backward." },
   ],
 };
-
 const MOODS = [
   // Harder feelings
   { key: "anxious", label: "Anxious", theme: "Safety" },
